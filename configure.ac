@@ -1,4 +1,4 @@
-AC_INIT([enigma2],[4.2],[http://gigablue-support.com])
+AC_INIT([enigma2],[6.0],[http://gigablue-support.com])
 AM_INIT_AUTOMAKE([dist-bzip2 no-define tar-pax -Wno-portability])
 AC_CONFIG_HEADERS([enigma2_config.h])
 
@@ -199,7 +199,7 @@ if test "$BOXTYPE" == "xc7362"; then
 	AC_DEFINE(KEY_FAV_TO_KEY_PVR, 1,[define FAV KEY to PVR])
 fi
 
-if test "$BOXTYPE" == "hd2400"; then
+if test "$BOXTYPE" == "hd2400" -o "$BOXTYPE" == "hd51" -o "$BOXTYPE" == "hd52"; then
 	AC_DEFINE(KEY_PLAY_ACTUALLY_IS_KEY_PLAYPAUSE, 1,[define when rc sends a KEY_PLAY event for its KEY_PLAYPAUSE key])
 	AC_DEFINE(KEY_F3_TO_KEY_LIST, 1,[define when rc sends a KEY_F3 event for its KEY_LIST key])
 fi

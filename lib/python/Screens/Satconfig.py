@@ -243,6 +243,12 @@ class NimSetup(Screen, ConfigListScreen, ServiceStopScreen):
 			if self.nimConfig.configMode.value == "enabled":
 				self.list.append(getConfigListEntry(_("Terrestrial provider"), self.nimConfig.terrestrial))
 				self.list.append(getConfigListEntry(_("Enable 5V for active antenna"), self.nimConfig.terrestrial_5V))
+		elif self.nim.isCompatible("ATSC"):
+			self.configMode = getConfigListEntry(_("Configuration mode"), self.nimConfig.configMode)
+			self.list.append(self.configMode)
+			if self.nimConfig.configMode.value == "enabled":
+				self.list.append(getConfigListEntry(_("ATSC provider"), self.nimConfig.atsc))
+			self.have_advanced = False
 		else:
 			self.have_advanced = False
 		self["config"].list = self.list
@@ -354,9 +360,9 @@ class NimSetup(Screen, ConfigListScreen, ServiceStopScreen):
 					self.list.append(getConfigListEntry(_("Threshold"), currLnb.threshold))
 				elif currLnb.unicable.value == "unicable_matrix":
 					nimmanager.sec.reconstructUnicableDate(currLnb.unicableMatrixManufacturer, currLnb.unicableMatrix, currLnb)
-					manufacturer_name = currLnb.unicableMatrixManufacturer.value
+					manufacturer_name = currLnb.unicableMatrixManufacturer.value.decode('utf-8')
 					manufacturer = currLnb.unicableMatrix[manufacturer_name]
-					product_name = manufacturer.product.value
+					product_name = manufacturer.product.value.decode('utf-8')
 					self.advancedManufacturer = getConfigListEntry(_("Manufacturer"), currLnb.unicableMatrixManufacturer)
 					self.list.append(self.advancedManufacturer)
 					if product_name in manufacturer.scr:
@@ -368,9 +374,9 @@ class NimSetup(Screen, ConfigListScreen, ServiceStopScreen):
 						self.list.append(getConfigListEntry(_("Frequency"), manufacturer.vco[product_name][manufacturer.scr[product_name].index]))
 				elif currLnb.unicable.value == "unicable_lnb":
 					nimmanager.sec.reconstructUnicableDate(currLnb.unicableLnbManufacturer, currLnb.unicableLnb, currLnb)
-					manufacturer_name = currLnb.unicableLnbManufacturer.value
+					manufacturer_name = currLnb.unicableLnbManufacturer.value.decode('utf-8')
 					manufacturer = currLnb.unicableLnb[manufacturer_name]
-					product_name = manufacturer.product.value
+					product_name = manufacturer.product.value.decode('utf-8')
 					self.advancedManufacturer = getConfigListEntry(_("Manufacturer"), currLnb.unicableLnbManufacturer)
 					self.list.append(self.advancedManufacturer)
 					if product_name in manufacturer.scr:
@@ -842,7 +848,7 @@ class NimSelection(Screen):
 							text = _("Simple")
 					elif nimConfig.configMode.value == "advanced":
 						text = _("Advanced")
-				elif x.isCompatible("DVB-T") or x.isCompatible("DVB-C"):
+				elif x.isCompatible("DVB-T") or x.isCompatible("DVB-C") or x.isCompatible("ATSC"):
 					if nimConfig.configMode.value == "nothing":
 						text = _("Nothing connected")
 					elif nimConfig.configMode.value == "enabled":

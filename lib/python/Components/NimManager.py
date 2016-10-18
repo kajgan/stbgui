@@ -343,9 +343,9 @@ class SecConfigure:
 					sec.setLNBThreshold(11700000)
 				elif currLnb.lof.value == "unicable":
 					def setupUnicable(configManufacturer, ProductDict):
-						manufacturer_name = configManufacturer.value
+						manufacturer_name = configManufacturer.value.decode('utf-8')
 						manufacturer = ProductDict[manufacturer_name]
-						product_name = manufacturer.product.value
+						product_name = manufacturer.product.value.decode('utf-8')
 						if product_name == "None" and manufacturer.product.saved_value != "None":
 							product_name = manufacturer.product.value = manufacturer.product.saved_value
 						manufacturer_scr = manufacturer.scr
@@ -554,7 +554,10 @@ class SecConfigure:
 		if SDict is None:
 			return
 
+		if ManufacturerName is not None:
+			ManufacturerName = ManufacturerName.decode("utf-8")
 		print "[NimManager] ManufacturerName %s" % ManufacturerName
+
 		PDict = SDict.get(ManufacturerName, None)			#dict contained last stored device data
 		if PDict is None:
 			return
@@ -838,6 +841,12 @@ class NimManager:
 	def getTranspondersTerrestrial(self, region):
 		return self.transpondersterrestrial[region]
 
+	def getTranspondersATSC(self, nim):
+		nimConfig = config.Nims[nim]
+		if nimConfig.configMode.value != "nothing":
+			return self.transpondersatsc[self.atscList[nimConfig.atsc.index][0]]
+		return []
+
 	def getCableDescription(self, nim):
 		return self.cablesList[config.Nims[nim].scan_provider.index][0]
 
@@ -1025,6 +1034,10 @@ class NimManager:
 			db.readCables(self.cablesList, self.transponderscable)
 			print "[NimManager] Reading terrestrial.xml"
 			db.readTerrestrials(self.terrestrialsList, self.transpondersterrestrial)
+
+		if self.hasNimType("ATSC"):
+			print "[NimManager] Reading atsc.xml"
+			db.readATSC(self.atscList, self.transpondersatsc)
 
 	def enumerateNIMs(self):
 		# enum available NIMs. This is currently very receiver-centric and uses the /proc/bus/nim_sockets interface.
@@ -1285,7 +1298,7 @@ class NimManager:
 			nim = config.Nims[slotid]
 			configMode = nim.configMode.value
 
-			if self.nim_slots[slotid].isCompatible("DVB-S") or self.nim_slots[slotid].isCompatible("DVB-T") or self.nim_slots[slotid].isCompatible("DVB-C"):
+			if any([self.nim_slots[slotid].isCompatible(x) for x in "DVB-S", "DVB-T", "DVB-C", "ATSC"]):
 				return not (configMode == "nothing")
 
 	def getSatListForNim(self, slotid):
@@ -1956,6 +1969,13 @@ def InitNimManager(nimmgr, update_slots = []):
 			nim.terrestrial = ConfigSelection(choices = list)
 			nim.terrestrial_5V = ConfigOnOff()
 
+	def createATSCConfig(nim, x):
+		try:
+			nim.atsc
+		except:
+			list = [(str(n), x[0]) for n, x in enumerate(nimmgr.atscList)]
+			nim.atsc = ConfigSelection(choices = list)
+
 	def tunerTypeChanged(nimmgr, configElement, initial=False):
 		print "[InitNimManager] dvb_api_version ",iDVBFrontend.dvb_api_version
 		configElement.save()
@@ -2077,6 +2097,14 @@ def InitNimManager(nimmgr, update_slots = []):
 					},
 				default = "enabled")
 			createTerrestrialConfig(nim, x)
+		elif slot.isCompatible("ATSC"):
+			nim.configMode = ConfigSelection(
+				choices = {
+					"enabled": _("enabled"),
+					"nothing": _("nothing connected"),
+					},
+				default = "enabled")
+			createATSCConfig(nim, x)
 		else:
 			empty_slots += 1
 			nim.configMode = ConfigSelection(choices = { "nothing": _("disabled") }, default="nothing");
@@ -2102,6 +2130,9 @@ def InitNimManager(nimmgr, update_slots = []):
 			empty = False
 		if slot.canBeCompatible("DVB-T"):
 			createTerrestrialConfig(nim, x)
+			empty = False
+		if slot.canBeCompatible("ATSC"):
+			createATSCConfig(nim, x)
 			empty = False
 		if empty:
 			empty_slots += 1

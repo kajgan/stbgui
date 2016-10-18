@@ -13,6 +13,8 @@
 
 #include <sstream>
 
+#include "absdiff.h"
+
 #ifndef I2C_SLAVE_FORCE
 #define I2C_SLAVE_FORCE	0x0706
 #endif
@@ -342,8 +344,8 @@ RESULT eDVBFrontendParameters::calculateDifference(const iDVBFrontendParameters 
 				diff = 1<<27;
 			else
 			{
-				diff = abs(sat.frequency - osat.frequency);
-				diff += abs(sat.symbol_rate - osat.symbol_rate);
+				diff = absdiff(sat.frequency, osat.frequency);
+				diff += absdiff(sat.symbol_rate, osat.symbol_rate);
 			}
 			return 0;
 		}
@@ -361,8 +363,8 @@ RESULT eDVBFrontendParameters::calculateDifference(const iDVBFrontendParameters 
 				diff = 1 << 27;
 			else
 			{
-				diff = abs(cable.frequency - ocable.frequency);
-				diff += abs(cable.symbol_rate - ocable.symbol_rate);
+				diff = absdiff(cable.frequency, ocable.frequency);
+				diff += absdiff(cable.symbol_rate, ocable.symbol_rate);
 			}
 			return 0;
 		}
@@ -404,7 +406,7 @@ RESULT eDVBFrontendParameters::calculateDifference(const iDVBFrontendParameters 
 			else if (oterrestrial.system != terrestrial.system)
 				diff = 1 << 30;
 			else
-				diff = abs(terrestrial.frequency - oterrestrial.frequency) / 1000;
+				diff = absdiff(terrestrial.frequency, oterrestrial.frequency) / 1000;
 			return 0;
 		}
 		case iDVBFrontend::feATSC:
@@ -419,7 +421,7 @@ RESULT eDVBFrontendParameters::calculateDifference(const iDVBFrontendParameters 
 				diff = 1 << 29;
 			else
 			{
-				diff = abs(atsc.frequency - oatsc.frequency);
+				diff = absdiff(atsc.frequency, oatsc.frequency);
 			}
 			return 0;
 		}
@@ -453,8 +455,8 @@ RESULT eDVBFrontendParameters::getHash(unsigned long &hash) const
 		}
 		case iDVBFrontend::feATSC:
 		{
-			hash = 0xDDDD0000;
-			hash |= (atsc.frequency/1000)&0xFFFF;
+			hash = atsc.system == eDVBFrontendParametersATSC::System_ATSC ? 0xEEEE0000 : 0xFFFF0000;
+			hash |= (atsc.frequency/1000000)&0xFFFF;
 			return 0;
 		}
 		default:
@@ -656,8 +658,9 @@ int eDVBFrontend::openFrontend()
 #endif
 						break;
 					}
-					case FE_ATSC:	// placeholder to prevent warning
+					case FE_ATSC:
 					{
+						m_delsys[SYS_ATSC] = true;
 						break;
 					}
 				}
@@ -1029,6 +1032,10 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 		if (snr != 0)
 			ret = 10 * (int)(-100 * (log10(snr) - log10(255)));
 	}
+	else if (strstr(m_description, "Si2166B")) // DM7080HD/DM7020HD/DM820/DM800se DVB-S2 Dual NIM
+	{
+		ret = (snr * 240) >> 8;
+	}
 	else if (strstr(m_description, "BCM4506") || strstr(m_description, "BCM4505"))
 	{
 		ret = (snr * 100) >> 8;
@@ -1043,6 +1050,7 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 		)
 	{
 		ret = (int)((((double(snr) / (65536.0 / 100.0)) * 0.1244) + 2.5079) * 100);
+		sat_max = 1490;
 	}
 	else if (!strcmp(m_description, "BCM7346 (internal)"))
 	{
@@ -1054,6 +1062,7 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 		|| !strcmp(m_description, "BCM7362 DVB-S2 NIM (internal)")
 		|| !strcmp(m_description, "GIGA DVB-S2 NIM (Internal)")
 		|| !strcmp(m_description, "GIGA DVB-S2 NIM (SP2246T)")
+		|| !strcmp(m_description, "GIGA DVB-S2 NIM (TS2M08)")
 		)
 	{
 		ret = (int)((((double(snr) / (65536.0 / 100.0)) * 0.1710) - 1.0000) * 100);
@@ -1062,6 +1071,7 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 		|| strstr(m_description, "GIGA DVB-C/T NIM (SI4765)")
 		|| strstr(m_description, "GIGA DVB-C/T NIM (SI41652)")
 		|| strstr(m_description, "GIGA DVB-C/T2 NIM (SI4768)")
+		|| strstr(m_description, "GIGA DVB-C/T2 NIM (SI41682)")
 		)
 	{
 		int type = -1;
@@ -1080,7 +1090,7 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 	}
 	else if (!strcmp(m_description, "Vuplus DVB-S NIM(7376 FBC)")) // VU+ Solo4k
 	{
-		ret = (int)((((double(snr) / (65536.0 / 100.0)) * 0.1850) - 0.3500) * 100);
+		ret = (int)((((double(snr) / (65536.0 / 100.0)) * 0.1480) + 0.9560) * 100);
 	}
 	else if (!strcmp(m_description, "BCM7362 (internal) DVB-S2")) // Xsarius
 	{
@@ -1142,6 +1152,19 @@ void eDVBFrontend::calculateSignalQuality(int snr, int &signalquality, int &sign
 	{
 		ret = (snr * 2000) / 0xFFFF;
 		sat_max = 2000;
+	}
+	else if(!strcmp(m_description, "WinTV HVR-850") || !strcmp(m_description, "Hauppauge"))
+	{
+		eDVBFrontendParametersATSC parm;
+		oparm.getATSC(parm);
+		switch (parm.modulation)
+		{
+		case eDVBFrontendParametersATSC::Modulation_QAM256: atsc_max = 4000; break;
+		case eDVBFrontendParametersATSC::Modulation_QAM64: atsc_max = 2900; break;
+		case eDVBFrontendParametersATSC::Modulation_VSB_8: atsc_max = 2700; break;
+		default: break;
+		}
+		ret = snr * 10;
 	}
 
 	signalqualitydb = ret;
@@ -2875,6 +2898,10 @@ int eDVBFrontend::isCompatibleWith(ePtr<iDVBFrontendParameters> &feparm)
 		can_handle_dvbc_annex_b = supportsDeliverySystem(SYS_DVBC_ANNEX_B, !m_multitype);
 		can_handle_atsc = supportsDeliverySystem(SYS_ATSC, !m_multitype);
 		if (feparm->getATSC(parm) < 0)
+		{
+			return 0;
+		}
+		if (!can_handle_atsc && !can_handle_dvbc_annex_b)
 		{
 			return 0;
 		}

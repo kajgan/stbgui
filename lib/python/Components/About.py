@@ -23,7 +23,7 @@ def getImageVersionString():
 
 def getFlashDateString():
 	try:
-		return time.strftime(_("%Y-%m-%d %H:%M"), time.localtime(os.stat("/boot").st_ctime))
+		return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.stat("/boot").st_ctime))
 	except:
 		return _("unknown")
 
@@ -116,6 +116,15 @@ def getCPUInfoString():
 			if line[0] == "cpu MHz":
 				cpu_speed = "%1.0f" % float(line[1])
 				cpu_count += 1
+		if not cpu_speed:
+			try:
+				cpu_speed = int(open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq").read()) / 1000
+			except:
+				try:
+					import binascii
+					cpu_speed = int(int(binascii.hexlify(open('/sys/firmware/devicetree/base/cpus/cpu@0/clock-frequency', 'rb').read()), 16) / 100000000) * 100
+				except:
+					cpu_speed = "-"
 		if os.path.isfile('/proc/stb/fp/temp_sensor_avs'):
 			temperature = open("/proc/stb/fp/temp_sensor_avs").readline().replace('\n','')
 			return "%s %s MHz (%s) %s°C" % (processor, cpu_speed, ngettext("%d core", "%d cores", cpu_count) % cpu_count, temperature)
@@ -184,8 +193,12 @@ def getIfTransferredData(ifname):
 def getDriverInstalledDate():
 	try:
 		from glob import glob
-		driver = [x.split("-")[-2:-1][0][-8:] for x in open(glob("/var/lib/opkg/info/*-dvb-modules-*.control")[0], "r") if x.startswith("Version:")][0]
-		return  "%s-%s-%s" % (driver[:4], driver[4:6], driver[6:])
+		try:
+			driver = [x.split("-")[-2:-1][0][-8:] for x in open(glob("/var/lib/opkg/info/*-dvb-modules-*.control")[0], "r") if x.startswith("Version:")][0]
+			return  "%s-%s-%s" % (driver[:4], driver[4:6], driver[6:])
+		except:
+			driver = [x.split("Version:") for x in open(glob("/var/lib/opkg/info/*-dvb-proxy-*.control")[0], "r") if x.startswith("Version:")][0]
+			return  "%s" % driver[1].replace("\n","")
 	except:
 		return _("unknown")
 

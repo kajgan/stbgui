@@ -45,6 +45,7 @@ SystemInfo["HasExternalPIP"] = getMachineBuild() not in ('et9x00', 'et6x00', 'et
 SystemInfo["VideoDestinationConfigurable"] = fileExists("/proc/stb/vmpeg/0/dst_left")
 SystemInfo["hasPIPVisibleProc"] = fileCheck("/proc/stb/vmpeg/1/visible")
 SystemInfo["hasTuners"] = getHasTuners() or fileCheck("/usr/lib/enigma2/python/Plugins/SystemPlugins/SatipClient/plugin.pyo")
+SystemInfo["hasGBIpboxClient"] = fileCheck("/usr/lib/enigma2/python/Plugins/Extensions/GBIpboxClient/plugin.pyo")
 
 #if getBoxType() in ('gbquadplus'):
 #	SystemInfo["WakeOnLAN"] = False
@@ -71,3 +72,5 @@ SystemInfo["HasBypassEdidChecking"] = fileCheck("/proc/stb/hdmi/bypass_edid_chec
 SystemInfo["HasColorspace"] = fileCheck("/proc/stb/video/hdmi_colorspace")
 SystemInfo["HasColorspaceSimple"] = SystemInfo["HasColorspace"] and getBoxType() in ('vusolo4k')
 SystemInfo["HasMultichannelPCM"] = fileCheck("/proc/stb/audio/multichannel_pcm")
+SystemInfo["HasMMC"] = getBoxType() in ('vusolo4k', 'hd51', 'hd52')
+SystemInfo["CommonInterfaceCIDelay"] = fileCheck("/proc/stb/tsmux/rmx_delay")
