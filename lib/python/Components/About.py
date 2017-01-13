@@ -46,9 +46,8 @@ def getKernelVersionString():
 
 def getChipSetString():
 	if getMachineBuild() in ('gb73625'):
-		return "BCM73625"
-	elif getMachineBuild() in ('gbuhdquad'):
-		return "BCM7252S"	else:
+		return "BCM73625"	
+	else:
 		try:
 			f = open('/proc/stb/info/chipset', 'r')
 			chipset = f.read()
