@@ -55,8 +55,9 @@ def getChipSetString():
 			return str(chipset.lower().replace('\n','').replace('bcm','BCM').replace('brcm','BRCM').replace('sti',''))
 		except IOError:
 			return "unavailable"
+
 def getChipSetString():
-	if getMachineBuild() in ('gb7252s'):
+	if getMachineBuild() in ('gbuhdquad'):
 		return "BCM7252S"
 	else:
 		try:
@@ -66,6 +67,7 @@ def getChipSetString():
 			return str(chipset.lower().replace('\n','').replace('bcm','BCM').replace('brcm','BRCM').replace('sti',''))
 		except IOError:
 			return "unavailable"
+		
 def getCPUString():
 	if getMachineBuild() in ('xc7362'):
 		return "Broadcom"
